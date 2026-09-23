@@ -1,0 +1,25 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+env/
+
+# Local sample data & Debug files
+data/raw_sample/
+*.json
+!.github/*.json
+.env
+
+# Config & GCP Credentials (BẢO MẬT)
+src/config/*.json
+
+# Airflow & MinIO local data/logs
+infrastructure/airflow/logs/
+infrastructure/airflow/plugins/
+infrastructure/minio/data/
+
+# dbt generated files
+src/transform/tiki_dbt_project/target/
+src/transform/tiki_dbt_project/dbt_packages/
+src/transform/tiki_dbt_project/logs/
