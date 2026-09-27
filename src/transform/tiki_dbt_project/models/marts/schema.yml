@@ -1,0 +1,138 @@
+version: 2
+
+models:
+  - name: dim_product
+    description: >
+      Dimension SCD2 của product — chỉ thuộc tính mô tả của bản thân sản
+      phẩm (tên, url, category) + FK tới seller_id/brand_id. Giá/rating/
+      quantity_sold KHÔNG ở đây, xem fact_product_snapshot.
+
+    columns:
+      - name: product_key
+        description: Surrogate key (product_id + valid_from), unique cho từng version.
+        tests:
+          - not_null
+          - unique
+
+      - name: product_id
+        tests:
+          - not_null
+
+      - name: seller_id
+        description: >
+          FK tới dim_seller — join kèm điều kiện valid_from/valid_to
+          nếu cần phân tích lịch sử.
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_seller')
+                field: seller_id
+
+      - name: brand_id
+        description: >
+          FK tới dim_brand (SCD1, không cần điều kiện ngày khi join).
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_brand')
+                field: brand_id
+
+  - name: dim_seller
+    description: >
+      Dimension SCD2 của seller — track riêng biệt khỏi dim_product vì
+      seller đổi tên/trạng thái là sự kiện độc lập với sản phẩm.
+
+    columns:
+      - name: seller_key
+        description: Surrogate key (seller_id + valid_from), unique cho từng version.
+        tests:
+          - not_null
+          - unique
+
+      - name: seller_id
+        tests:
+          - not_null
+
+  - name: dim_brand
+    description: >
+      Dimension SCD Type 1 (không giữ lịch sử) của brand — brand hầu như
+      không đổi tên nên không cần track qua thời gian như seller.
+
+    columns:
+      - name: brand_id
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_product_snapshot
+    description: >
+      Fact table, grain = 1 dòng/sản phẩm/ngày. seller_id/brand_id lấy
+      trực tiếp từ dữ liệu đúng ngày đó (không join dim SCD2) để phân tích
+      lịch sử không bị sai khi seller/brand từng thay đổi. Materialized
+      incremental để không mất lịch sử qua các lần dbt run.
+
+    columns:
+      - name: fact_key
+        tests:
+          - not_null
+          - unique
+
+      - name: product_id
+        description: FK tới dim_product
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_id
+
+      - name: snapshot_date
+        tests:
+          - not_null
+
+      - name: seller_id
+        description: >
+          Seller của sản phẩm TẠI ĐÚNG snapshot_date này
+          (FK tới dim_seller).
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_seller')
+                field: seller_id
+
+      - name: brand_id
+        description: >
+          Brand của sản phẩm TẠI ĐÚNG snapshot_date này
+          (FK tới dim_brand).
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_brand')
+                field: brand_id
+
+      - name: price
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+
+      - name: discount_pct
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+                inclusive: true
+
+      - name: price_change_pct
+        description: >
+          % thay đổi giá so với NGÀY TRƯỚC (LAG theo snapshot_date).
+          NULL nếu là ngày đầu tiên có dữ liệu của sản phẩm đó.
+
+      - name: days_since_last_price_change
+        description: >
+          Số ngày giá đứng yên kể từ lần đổi giá gần nhất
+          (tính từ ngày xuất hiện hoặc ngày đổi giá gần nhất).
