@@ -1,0 +1,42 @@
+version: 2
+
+sources:
+  - name: staging
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: staging
+    tables:
+      - name: products
+        description: >
+          Dữ liệu sản phẩm Tiki đã clean (pandas), load theo partition
+          snapshot_date. Mỗi lần Airflow chạy, 1 partition mới của ngày
+          đó được ghi đè (WRITE_TRUNCATE) — các ngày cũ không bị mất,
+          bảng này tự tích lũy lịch sử theo partition.
+          Là nguồn chung cho 3 staging model: stg_products (batch mới nhất,
+          dùng cho snapshot SCD2), stg_products_history (full lịch sử,
+          dùng cho fact table), và stg_sellers (dedup theo seller_id).
+
+        columns:
+          - name: id
+            description: Product ID trên Tiki.
+            tests:
+              - not_null
+
+          - name: price
+            description: Giá bán tại thời điểm crawl.
+            tests:
+              - not_null
+
+          - name: seller_id
+            description: ID seller sở hữu sản phẩm — có thể đổi seller theo thời gian.
+            tests:
+              - not_null
+
+          - name: brand_id
+            description: ID brand của sản phẩm — hầu như tĩnh, không cần SCD2.
+
+          - name: snapshot_date
+            description: >
+              Ngày crawl. Dùng để lọc batch mới nhất (stg_products) hoặc
+              giữ nguyên full lịch sử (stg_products_history).
+            tests:
+              - not_null
