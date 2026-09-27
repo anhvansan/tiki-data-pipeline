@@ -4,12 +4,6 @@ clean_products.py
 Giai đoạn 2 (phần Clean): đọc raw JSON từ MinIO, chuẩn hóa bằng pandas,
 ghi lại cleaned JSON vào MinIO (path riêng), kèm data quality log.
 
-Nguyên tắc: KHÔNG tự ý auto-fill giá trị mặc định vô căn cứ (VD: giá null
--> 0) — chỉ áp dụng các rule đã verify rõ ràng từ bước explore_api.py:
-  - quantity_sold: object {"value": N} hoặc null -> lấy .value, fallback 0
-  - availability: dùng làm cờ còn hàng (1) / hết hàng (0)
-  - Loại field rác không cần cho phân tích (badges_*, impression_info...)
-
 Cách chạy:
     python -m src.transform.clean_products --date 2026-09-23
 """
@@ -29,7 +23,6 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Field thật sự cần cho fact/dim table — mọi field khác bị loại bỏ ở đây.
-# Nếu sau này cần thêm field mới, sửa danh sách này, ko sửa rải rác trong code.
 KEEP_FIELDS = [
     "id", "sku", "name", "url_key", "availability",
     "seller_id", "seller_name", "brand_id", "brand_name",
@@ -38,7 +31,7 @@ KEEP_FIELDS = [
     "primary_category_name", "primary_category_path",
 ]
 
-# thiếu 1 trong 3 field này -> loại record
+# Thiếu 1 trong 3 field này -> loại record
 REQUIRED_FIELDS = ["id", "price", "seller_id"]
 
 
@@ -62,6 +55,14 @@ def extract_quantity_sold(value) -> int:
 
 def clean_dataframe(raw_items: list[dict], run_date: str) -> tuple[pd.DataFrame, dict]:
     """Trả về (df đã clean, quality_report)."""
+
+    # 1. Trích xuất các trường lồng (nested JSON) ra top-level trước khi tạo DataFrame
+    for item in raw_items:
+        visible_info = item.get("visible_impression_info") or {}
+        amplitude = visible_info.get("amplitude") or {}
+        item["primary_category_name"] = amplitude.get("primary_category_name")
+
+    # 2. Khởi tạo DataFrame từ danh sách dict đã bóc tách
     df = pd.DataFrame(raw_items)
     quality_report = {"input_rows": len(df)}
 
@@ -69,7 +70,7 @@ def clean_dataframe(raw_items: list[dict], run_date: str) -> tuple[pd.DataFrame,
         quality_report["output_rows"] = 0
         return df, quality_report
 
-    # Chỉ giữ field cần thiết (field không tồn tại trong response -> NaN)
+    # Chỉ giữ field cần thiết (field không tồn tại trong response -> None)
     for col in KEEP_FIELDS:
         if col not in df.columns:
             df[col] = None
@@ -83,18 +84,17 @@ def clean_dataframe(raw_items: list[dict], run_date: str) -> tuple[pd.DataFrame,
     df = df.dropna(subset=REQUIRED_FIELDS)
     quality_report["dropped_missing_required"] = before - len(df)
 
-    # Loại giá trị giá phi lý (giá <= 0) — không auto-sửa, chỉ loại và log
+    # Loại giá trị giá phi lý (giá <= 0)
     before = len(df)
     df = df[df["price"] > 0]
     quality_report["dropped_invalid_price"] = before - len(df)
 
-    # Loại duplicate theo id (cùng sản phẩm xuất hiện 2 lần trong cùng ngày
-    # do overlap giữa các page, hoặc bị trùng khi gọi lại do lỗi mạng)
+    # Loại duplicate theo id trong cùng ngày
     before = len(df)
     df = df.drop_duplicates(subset=["id"])
     quality_report["dropped_duplicate_id"] = before - len(df)
 
-    # Thêm cột snapshot_date -> bắt buộc cho việc xây SCD2 sau này ở dbt
+    # Thêm cột snapshot_date -> bắt buộc cho việc xây SCD2/Fact ở dbt
     df["snapshot_date"] = run_date
 
     quality_report["output_rows"] = len(df)
@@ -128,7 +128,7 @@ def run(run_date: str):
             "DataFrame rỗng sau khi clean — KHÔNG ghi lên MinIO, kiểm tra lại raw data.")
         return
 
-    # Ghi cleaned data lên MinIO dưới dạng JSON lines, path riêng khỏi raw/
+    # Ghi cleaned data lên MinIO dưới dạng JSON lines
     buffer = io.StringIO()
     df.to_json(buffer, orient="records", lines=True, force_ascii=False)
     cleaned_key = f"cleaned/tiki/{run_date}/products.jsonl"
