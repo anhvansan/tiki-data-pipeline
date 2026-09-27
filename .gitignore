@@ -23,3 +23,8 @@ infrastructure/minio/data/
 src/transform/tiki_dbt_project/target/
 src/transform/tiki_dbt_project/dbt_packages/
 src/transform/tiki_dbt_project/logs/
+
+src/transform/tiki_dbt_project/profiles.yml
+src/transform/tiki_dbt_project/.user.yml
+src/transform/tiki_dbt_project/logs/
+dbt.log
