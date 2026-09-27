@@ -28,3 +28,5 @@ src/transform/tiki_dbt_project/profiles.yml
 src/transform/tiki_dbt_project/.user.yml
 src/transform/tiki_dbt_project/logs/
 dbt.log
+
+logs/
