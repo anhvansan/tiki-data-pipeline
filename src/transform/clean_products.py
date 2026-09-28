@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Field thật sự cần cho fact/dim table — mọi field khác bị loại bỏ ở đây.
 KEEP_FIELDS = [
     "id", "sku", "name", "url_key", "availability",
-    "seller_id", "seller_name", "brand_id", "brand_name",
+    "seller_id", "seller_name", "brand_name",
     "price", "original_price", "discount", "discount_rate",
     "rating_average", "review_count", "quantity_sold",
     "primary_category_name", "primary_category_path",

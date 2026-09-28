@@ -9,7 +9,6 @@ renamed as (
         cast(id as int64)                      as product_id,
         cast(seller_id as int64)               as seller_id,
         seller_name,
-        cast(brand_id as int64)                as brand_id,
         brand_name,
         primary_category_name,
         cast(price as float64)                 as price,

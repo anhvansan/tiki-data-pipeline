@@ -1,6 +1,5 @@
 -- dim_product.sql
 -- Dimension SCD2 cho product — chỉ thuộc tính mô tả của BẢN THÂN sản phẩm
--- + FK tới seller_id/brand_id (join sang dim_seller/dim_brand để lấy tên).
 -- Giá, rating, quantity_sold KHÔNG ở đây — xem fact_product_snapshot.
 
 with snapshot as (
@@ -13,7 +12,7 @@ select
     product_sku,
     product_name,
     product_url_key,
-    brand_id,
+    brand_name,
     seller_id,
     primary_category_name,
     primary_category_path,

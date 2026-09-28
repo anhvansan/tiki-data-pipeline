@@ -4,8 +4,8 @@ models:
   - name: dim_product
     description: >
       Dimension SCD2 của product — chỉ thuộc tính mô tả của bản thân sản
-      phẩm (tên, url, category) + FK tới seller_id/brand_id. Giá/rating/
-      quantity_sold KHÔNG ở đây, xem fact_product_snapshot.
+      phẩm (tên, url, category) + seller_id.
+      Giá/rating/quantity_sold KHÔNG ở đây, xem fact_product_snapshot.
 
     columns:
       - name: product_key
@@ -28,15 +28,6 @@ models:
                 to: ref('dim_seller')
                 field: seller_id
 
-      - name: brand_id
-        description: >
-          FK tới dim_brand (SCD1, không cần điều kiện ngày khi join).
-        tests:
-          - relationships:
-              arguments:
-                to: ref('dim_brand')
-                field: brand_id
-
   - name: dim_seller
     description: >
       Dimension SCD2 của seller — track riêng biệt khỏi dim_product vì
@@ -53,20 +44,9 @@ models:
         tests:
           - not_null
 
-  - name: dim_brand
-    description: >
-      Dimension SCD Type 1 (không giữ lịch sử) của brand — brand hầu như
-      không đổi tên nên không cần track qua thời gian như seller.
-
-    columns:
-      - name: brand_id
-        tests:
-          - not_null
-          - unique
-
   - name: fact_product_snapshot
     description: >
-      Fact table, grain = 1 dòng/sản phẩm/ngày. seller_id/brand_id lấy
+      Fact table, grain = 1 dòng/sản phẩm/ngày. seller_id lấy
       trực tiếp từ dữ liệu đúng ngày đó (không join dim SCD2) để phân tích
       lịch sử không bị sai khi seller/brand từng thay đổi. Materialized
       incremental để không mất lịch sử qua các lần dbt run.
@@ -100,16 +80,6 @@ models:
               arguments:
                 to: ref('dim_seller')
                 field: seller_id
-
-      - name: brand_id
-        description: >
-          Brand của sản phẩm TẠI ĐÚNG snapshot_date này
-          (FK tới dim_brand).
-        tests:
-          - relationships:
-              arguments:
-                to: ref('dim_brand')
-                field: brand_id
 
       - name: price
         tests:

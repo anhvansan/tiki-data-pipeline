@@ -31,8 +31,8 @@ sources:
             tests:
               - not_null
 
-          - name: brand_id
-            description: ID brand của sản phẩm — hầu như tĩnh, không cần SCD2.
+          - name: brand_name
+            description: Tên brand được cung cấp trực tiếp từ dữ liệu nguồn Tiki.
 
           - name: snapshot_date
             description: >

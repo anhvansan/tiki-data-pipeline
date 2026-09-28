@@ -10,7 +10,7 @@
             'product_name',
             'product_url_key',
             'seller_id',
-            'brand_id',
+            'brand_name',
             'primary_category_name',
             'primary_category_path',
         ],

@@ -53,9 +53,8 @@ select
     w.product_id,
     w.snapshot_date,
 
-    -- seller_id/brand_id lấy TRỰC TIẾP từ data của đúng ngày đó (không join qua dim_product)
+    -- seller_id lấy TRỰC TIẾP từ data của đúng ngày đó (không join qua dim_product)
     w.seller_id,
-    w.brand_id,
     w.primary_category_name,
 
     w.price,

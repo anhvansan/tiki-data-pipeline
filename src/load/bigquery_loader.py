@@ -45,7 +45,6 @@ SCHEMA = [
     bigquery.SchemaField("availability", "INTEGER"),
     bigquery.SchemaField("seller_id", "INTEGER"),
     bigquery.SchemaField("seller_name", "STRING"),
-    bigquery.SchemaField("brand_id", "INTEGER"),
     bigquery.SchemaField("brand_name", "STRING"),
     bigquery.SchemaField("price", "FLOAT"),
     bigquery.SchemaField("original_price", "FLOAT"),

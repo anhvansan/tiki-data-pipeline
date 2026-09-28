@@ -18,7 +18,6 @@ renamed as (
         cast(availability as int64)             as availability,
         cast(seller_id as int64)                as seller_id,
         seller_name,
-        cast(brand_id as int64)                 as brand_id,
         brand_name,
         cast(price as float64)                  as price,
         cast(original_price as float64)         as original_price,
