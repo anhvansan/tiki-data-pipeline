@@ -6,7 +6,13 @@ with source as (
 latest_batch as (
     select *
     from source
-    where snapshot_date = (select max(snapshot_date) from source)
+    where snapshot_date = (
+        {% if var('snapshot_date', none) %}
+            date('{{ var("snapshot_date") }}')
+        {% else %}
+            (select max(snapshot_date) from source)
+        {% endif %}
+    )
 ),
 
 renamed as (

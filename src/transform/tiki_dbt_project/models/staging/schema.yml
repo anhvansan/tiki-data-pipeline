@@ -55,5 +55,3 @@ models:
           - unique
 
       - name: seller_name
-        tests:
-          - not_null

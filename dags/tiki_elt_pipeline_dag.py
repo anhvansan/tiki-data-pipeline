@@ -1,16 +1,20 @@
 """
 tiki_elt_pipeline_dag.py
--------------------------
+------------------------
 DAG chính cho pipeline Tiki Price & Promotion Intelligence.
 
-Hiện tại:
-    crawl_tiki_api >> upload_raw_to_minio
+Pipeline:
+    crawl_tiki_api
+        >> upload_raw_to_minio
+        >> clean_products
+        >> load_to_bigquery
+        >> dbt_build
 
-Các task phía sau sẽ được thêm từng bước:
-    clean_products
-    load_to_bigquery
-    dbt_run
-    dbt_test
+dbt build chịu trách nhiệm:
+    - chạy dbt models
+    - chạy dbt snapshots
+    - chạy dbt tests
+    - tự xử lý dependency giữa các resource thông qua ref()
 
 Nguyên tắc:
 - DAG chỉ làm orchestration.
@@ -22,10 +26,12 @@ from datetime import datetime
 
 from airflow import DAG  # type: ignore
 from airflow.operators.python import PythonOperator  # type: ignore
+from airflow.operators.bash import BashOperator  # type: ignore
 
 from src.extract.tiki_api_crawler import run as run_crawler
 from src.load.minio_uploader import run as run_minio_upload
 from src.transform.clean_products import run as run_clean_products
+from src.load.bigquery_loader import run as run_bigquery_loader
 
 
 def crawl_tiki_api_task(**context):
@@ -43,6 +49,11 @@ def upload_raw_to_minio_task(**context):
 def clean_products_task(**context):
     run_date = context["ds"]
     run_clean_products(run_date)
+
+
+def load_to_bigquery_task(**context):
+    run_date = context["ds"]
+    run_bigquery_loader(run_date)
 
 
 default_args = {
@@ -78,4 +89,17 @@ with DAG(
         python_callable=clean_products_task,
     )
 
-    crawl_tiki_api >> upload_raw_to_minio >> clean_products
+    load_to_bigquery = PythonOperator(
+        task_id="load_to_bigquery",
+        python_callable=load_to_bigquery_task,
+    )
+
+    run_dbt_build = BashOperator(
+        task_id="dbt_build",
+        bash_command="""
+            cd /opt/airflow/src/transform/tiki_dbt_project &&
+            dbt build
+        """
+    )
+
+    crawl_tiki_api >> upload_raw_to_minio >> clean_products >> load_to_bigquery >> run_dbt_build

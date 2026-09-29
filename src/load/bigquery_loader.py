@@ -2,9 +2,10 @@
 bigquery_loader.py
 --------------------
 Giai đoạn 2 (bước cuối): đọc cleaned JSONL từ MinIO, load vào BigQuery
-bảng staging.products. Dùng WRITE_TRUNCATE cho snapshot ngày đó (staging
-chỉ chứa batch mới nhất) — dữ liệu lịch sử thật sự được giữ lại ở tầng
-dbt snapshot (SCD2), không phải ở staging.
+bảng staging.products. Dùng WRITE_TRUNCATE cho partition của snapshot ngày đó.
+Mỗi ngày là một partition riêng nên staging.products có thể giữ
+lịch sử các snapshot theo ngày. dbt sẽ sử dụng lịch sử này để xây
+dựng các model downstream và SCD2.
 
 Yêu cầu trước khi chạy:
   - Đã tạo GCP service account, bật BigQuery API (xem hướng dẫn kèm theo).
@@ -85,7 +86,6 @@ def ensure_dataset(client: bigquery.Client):
     except Exception:
         logger.info("Dataset '%s' chưa tồn tại, đang tạo...", dataset_ref)
         dataset = bigquery.Dataset(dataset_ref)
-        # gần VN, giảm latency + đúng khu vực dữ liệu
         dataset.location = "asia-southeast1"
         client.create_dataset(dataset)
 
@@ -130,8 +130,7 @@ def load_to_bigquery(client: bigquery.Client, rows: list[dict], run_date: str):
     ensure_table(client, table_ref)
 
     # Load thẳng vào PARTITION của đúng ngày đó (decorator "$YYYYMMDD"), dùng
-    # WRITE_TRUNCATE. Vì đây là Load API (không phải DML), nên:
-    #   - Chạy được cả khi project chưa bật billing (tránh lỗi billingNotEnabled)
+    # WRITE_TRUNCATE.
     #   - WRITE_TRUNCATE chỉ xóa/ghi đè đúng partition đó, các ngày khác không
     #     bị ảnh hưởng -> an toàn khi chạy lại nhiều lần cho cùng 1 ngày.
     partition_suffix = run_date.replace("-", "")  # "2026-09-23" -> "20260923"
