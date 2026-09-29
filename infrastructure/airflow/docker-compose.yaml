@@ -2,22 +2,24 @@ version: "3.8"
 
 x-airflow-common: &airflow-common
   build:
-    context: .
-    dockerfile: Dockerfile
+    context: ../..
+    dockerfile: infrastructure/airflow/Dockerfile
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
-    # Biến project cần cho crawler/loader — đọc từ .env
-    MINIO_ENDPOINT: http://minio:9000 # dùng tên service, không phải localhost, vì chạy trong network chung
+
+    PYTHONPATH: /opt/airflow
+
+    MINIO_ENDPOINT: http://minio:9000
     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadminpassword}
     GCP_PROJECT_ID: ${GCP_PROJECT_ID}
     GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/config/gcp_service_account.json
   volumes:
-    - ./dags:/opt/airflow/dags
+    - ../../dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ../../src:/opt/airflow/src # để DAG import được src.extract, src.load...
