@@ -25,6 +25,7 @@ from airflow.operators.python import PythonOperator  # type: ignore
 
 from src.extract.tiki_api_crawler import run as run_crawler
 from src.load.minio_uploader import run as run_minio_upload
+from src.transform.clean_products import run as run_clean_products
 
 
 def crawl_tiki_api_task(**context):
@@ -37,6 +38,11 @@ def upload_raw_to_minio_task(**context):
     """Upload raw data tương ứng với ngày của DAG run."""
     run_date = context["ds"]
     run_minio_upload(run_date)
+
+
+def clean_products_task(**context):
+    run_date = context["ds"]
+    run_clean_products(run_date)
 
 
 default_args = {
@@ -67,4 +73,9 @@ with DAG(
         python_callable=upload_raw_to_minio_task,
     )
 
-    crawl_tiki_api >> upload_raw_to_minio
+    clean_products = PythonOperator(
+        task_id="clean_products",
+        python_callable=clean_products_task,
+    )
+
+    crawl_tiki_api >> upload_raw_to_minio >> clean_products
