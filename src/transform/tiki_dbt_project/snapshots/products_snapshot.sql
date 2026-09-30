@@ -14,7 +14,6 @@
             'primary_category_name',
             'primary_category_path',
         ],
-        invalidate_hard_deletes=True,
     )
 }}
 
