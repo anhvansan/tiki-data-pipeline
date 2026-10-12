@@ -208,9 +208,7 @@ The analytical layer is planned to answer questions such as:
 - How does average price vary across categories?
 - Which products experience frequent price changes?
 
-### Planned analytical layer
-
-Analytics marts will be added after the core pipeline and transformation layer are validated.
+### Analytical layer
 
 Potential marts include:
 
